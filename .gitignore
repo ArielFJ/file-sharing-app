@@ -13,3 +13,7 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# Local files and dirs
+sent_files/**/*
+sample_files/**/*

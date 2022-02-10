@@ -1,11 +1,23 @@
 package main
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
-	"strings"
+	"os"
 )
+
+type message struct {
+	Filename string `json:filename`
+	Data     []byte `json:data`
+}
+
+func (m *message) String() string {
+	return fmt.Sprintf("{\n filename: %v,\n dataLength: %v \n}\n", m.Filename, len(m.Data))
+}
+
+const delimiter byte = 254 // ■
 
 func main() {
 	listener, err := net.Listen("tcp", ":8000")
@@ -32,18 +44,31 @@ func printErr(err error) {
 
 func handleConn(c net.Conn) {
 	for {
-		msg, err := bufio.NewReader(c).ReadString('\n')
+		// msg, err := bufio.NewReader(c).ReadBytes(delimiter)
+		msg, err := ioutil.ReadAll(c)
 		if err != nil {
 			// printErr(err)
 			c.Close()
 			return
 		}
 
-		if strings.ToUpper(msg) == "EXIT" {
-			c.Close()
+		var myMessage message
+		err = json.Unmarshal(msg, &myMessage)
+		if err != nil {
+			printErr(fmt.Errorf("JSON: %v", err))
 			return
 		}
 
-		fmt.Println(msg)
+		// if strings.ToUpper(msg) == "EXIT" {
+		// 	c.Close()
+		// 	return
+		// }
+		
+		// toWrite := msg[: len(msg) - 1]
+		// toWrite = append(toWrite, '\n')
+		// fmt.Println(toWrite)
+		fmt.Println(myMessage)
+		os.WriteFile("../file/"+myMessage.Filename, myMessage.Data, 0644)
+		// return
 	}
 }
