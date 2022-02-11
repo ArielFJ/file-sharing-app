@@ -26,3 +26,7 @@ func main() {
 func printErr(err error) {
 	fmt.Printf("Error: %v", err)
 }
+
+func printErrPrefix(prefix string, err error) {
+	fmt.Printf("Error %v: %v", prefix, err)
+}

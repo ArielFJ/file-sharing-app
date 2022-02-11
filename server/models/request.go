@@ -8,7 +8,7 @@ type request struct {
 	Command  string `json:"command"`
 }
 
-func NewMessage(cmd, payload string) request {
+func NewRequest(cmd, payload string) request {
 	return request{
 		Command: cmd,
 		Data: []byte{},

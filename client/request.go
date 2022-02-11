@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"file-sharing-app/client/helpers"
+	"fmt"
+	"strings"
+)
 
 type request struct {
 	Payload string `json:"payload"`
@@ -14,6 +18,19 @@ func NewRequest(cmd, payload string) request {
 		Data: []byte{},
 		Payload: payload,
 	}
+}
+
+func BuildRequest(text string) (bool, request) {
+	cleanText := strings.ReplaceAll(text, "\r\n", "") // Take just the input without the return
+	words := strings.Split(cleanText, " ")
+	cmd := strings.TrimSpace(helpers.NormalizeString(words[0]))
+	payload := strings.TrimSpace(strings.Join(words[1:], " "))
+
+	if len(cmd) == 0{
+		return false, request{}
+	}
+
+	return true, NewRequest(cmd, payload)
 }
 
 func (m *request) String() string {
