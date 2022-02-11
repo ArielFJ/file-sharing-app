@@ -9,19 +9,20 @@ import (
 )
 
 type server struct {
-	clients map[Client]bool
+	clients  map[Client]bool
+	channels map[string][]Client
 	listener net.Listener
 }
 
 func NewServer(l net.Listener) server {
 	return server{
-		clients: make(map[Client]bool),
+		clients:  make(map[Client]bool),
 		listener: l,
 	}
 }
 
 func (s *server) Broadcast() {
-	
+
 }
 
 func (s *server) RunServer(closeChan chan bool) {
@@ -50,30 +51,54 @@ func (s *server) handleConn(c net.Conn) {
 		netData, err := bufio.NewReader(newClient.conn).ReadString('\n')
 		if err != nil {
 			helpers.PrintErr(fmt.Errorf("READ: %v", err))
-			closeClientConn(newClient, s)
+			s.closeClientConn(newClient)
 			return
 		}
 
-		var myMessage message
-		err = json.Unmarshal([]byte(netData), &myMessage)
+		var req request
+		err = json.Unmarshal([]byte(netData), &req)
 		if err != nil {
 			helpers.PrintErr(fmt.Errorf("JSON: %v", err))
 			return
 		}
 
-		if myMessage.Command == EXIT {
-			closeClientConn(newClient, s)
+		s.handleRequest(&newClient, req)
+		if req.Command == EXIT {
 			return
 		}
-		
-		fmt.Println("MSG", myMessage.String())
+
 		// os.WriteFile("../file/"+myMessage.Filename, myMessage.Data, 0644)
 	}
 }
 
-func closeClientConn(client Client, server *server) {
+func (s *server) closeClientConn(client Client) {
 	fmt.Println("Disconnecting user", client.username)
 	client.send([]byte("You have been disconnected\n"))
 	client.disconnect()
-	delete(server.clients, client)
+	delete(s.clients, client)
+}
+
+func (s *server) handleRequest(c *Client, r request) {
+	switch r.Command {
+	case USERNAME:
+		s.username(c, r)
+	case CHANNEL:
+
+	case SEND:
+
+	case MESSAGE:
+
+	case LIST:
+
+	case EXIT:
+		s.closeClientConn(*c)
+	default:
+		c.conn.Write([]byte("Invalid Command\n"))
+	}
+}
+
+func (s *server) username(c *Client, r request) {
+	c.username = r.Payload
+	response := fmt.Sprintf("Your new username is %v\n", c.username)
+	c.conn.Write([]byte(response))
 }
