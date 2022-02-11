@@ -14,18 +14,10 @@ func NewClient(c net.Conn) Client {
 	};
 }
 
-// func (c *Client) receive() {
-
-// }
-
-func (c *Client) send() {
-	
+func (c *Client) send(data []byte) {
+	c.conn.Write(data)
 }
 
 func (c *Client) disconnect() {
 	c.conn.Close()
 }
-
-// func (c *Client) connect() {
-	
-// }

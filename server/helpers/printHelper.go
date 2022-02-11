@@ -3,5 +3,5 @@ package helpers
 import "fmt"
 
 func PrintErr(err error) {
-	fmt.Printf("Error: %v", err)
+	fmt.Printf("Error: %v\n", err)
 }
