@@ -40,7 +40,7 @@ func (r *request) String() string {
 	return fmt.Sprintf("{\ncommand: %v,\n payload: %v,\n dataLength: %v \n}\n", r.Command, r.Payload, len(r.Data))
 }
 
-func (r *request) BuildRequestWithFileData() error {
+func (r *request) UpdateRequestWithFileData() error {
 	args := strings.Split(strings.TrimSpace(r.Payload), " ")
 	filePath := strings.TrimSpace(strings.Join(args[1:], " "))
 

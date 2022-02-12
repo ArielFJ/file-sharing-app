@@ -1,12 +1,8 @@
 package models
 
 import (
-	"bufio"
 	"encoding/json"
-	"file-sharing-app/client/helpers"
 	"fmt"
-	"io"
-	"net"
 )
 
 const (
@@ -40,26 +36,4 @@ func (r *Response) ToBuffer() []byte {
 		return []byte{}
 	}
 	return bytes
-}
-
-func ReadFromConn(req request, c net.Conn) (res Response, mildError, fatalError bool) {
-	fatalError = false
-	mildError = false
-
-	netData, err := bufio.NewReader(c).ReadString('\n')
-	if err != nil {
-		helpers.PrintErrPrefix("RESPONSE", err)
-		if err == io.EOF {
-			fatalError = true
-		}
-
-		mildError = true
-	}
-
-	err = json.Unmarshal([]byte(netData), &res)
-	if err != nil {
-		res = NewResponse(ERROR, "")
-	}
-
-	return res, mildError, fatalError
 }

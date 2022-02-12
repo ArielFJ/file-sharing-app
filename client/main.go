@@ -6,8 +6,6 @@ import (
 	"net"
 )
 
-const delimiter byte = 254 // ■
-
 func main() {
 	conn, err := net.Dial("tcp", "127.0.0.1:8000")
 	if err != nil {
@@ -21,5 +19,5 @@ func main() {
 
 	go client.HandleSession()
 
-	<- closeChan
+	<-closeChan
 }

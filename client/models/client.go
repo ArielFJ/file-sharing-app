@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"file-sharing-app/client/helpers"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -34,7 +35,6 @@ func (c *Client) send(data []byte) {
 }
 
 func (c *Client) disconnect() {
-	// c.conn.Close()
 	c.closeChan <- true
 }
 
@@ -76,7 +76,7 @@ func (c *Client) HandleSession() {
 		}
 
 		if req.Command == SEND {
-			err := req.BuildRequestWithFileData()
+			err := req.UpdateRequestWithFileData()
 			if err != nil {
 				helpers.PrintErrPrefix("SEND", err)
 				continue
@@ -92,7 +92,7 @@ func (c *Client) HandleSession() {
 		// Send request to SERVER
 		c.send(jsonBytes)
 
-		res, mildError, fatalError := ReadFromConn(req, c.conn)
+		res, mildError, fatalError := readFromConn(req, c.conn)
 		if fatalError {
 			break
 		}
@@ -166,4 +166,26 @@ func (c *Client) disconnectFromChannel(jsonReq []byte) {
 	inputPromptText = ">> "
 	c.send(jsonReq)
 	c.isChannelMode = false
+}
+
+func readFromConn(req request, c net.Conn) (res Response, mildError, fatalError bool) {
+	fatalError = false
+	mildError = false
+
+	netData, err := bufio.NewReader(c).ReadString('\n')
+	if err != nil {
+		helpers.PrintErrPrefix("RESPONSE", err)
+		if err == io.EOF {
+			fatalError = true
+		}
+
+		mildError = true
+	}
+
+	err = json.Unmarshal([]byte(netData), &res)
+	if err != nil {
+		res = NewResponse(ERROR, "")
+	}
+
+	return res, mildError, fatalError
 }

@@ -16,15 +16,6 @@ var (
 	HELP     = "help"     // Show the help text
 )
 
-func expectResponse(cmd string) bool {
-	switch cmd {
-	case USERNAME, CHANNEL, SEND, LIST, EXIT:
-		return true
-	default:
-		return false
-	}
-}
-
 func validateCommand(req request) (bool, string) {
 	payload := strings.TrimSpace(req.Payload)
 	args := strings.Split(payload, " ")
