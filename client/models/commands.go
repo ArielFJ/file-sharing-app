@@ -6,14 +6,14 @@ import (
 )
 
 var (
-	USERNAME = "username"
-	CHANNEL  = "channel"
-	STOP     = "stop"
-	SEND     = "send"
-	MESSAGE  = "msg"
-	LIST     = "list"
-	EXIT     = "exit"
-	HELP     = "help"
+	USERNAME = "username" // Get or set username
+	CHANNEL  = "channel"  // Join a channel
+	STOP     = "stop"     // Close the connection with a channel. While in a channel, this is the only valid command
+	SEND     = "send"     // Send a file to a channel
+	MESSAGE  = "msg"      // Send a message to a channel
+	LIST     = "list"     // List available channels
+	EXIT     = "exit"     // Close the app
+	HELP     = "help"     // Show the help text
 )
 
 func expectResponse(cmd string) bool {
@@ -31,17 +31,29 @@ func validateCommand(req request) (bool, string) {
 
 	switch req.Command {
 	case USERNAME:
+		if len(args) > 1 {
+			return false, req.Command + " takes zero or one argument. One for setting the username."
+		}
 	case CHANNEL:
 		if len(args) != 1 || payload == "" {
-			return false, req.Command + " take one argument"
+			return false, req.Command + " takes one argument"
 		}
-	case SEND:
-
-	case MESSAGE:
-
-	case LIST:
-
-	case EXIT:
+	// case SEND:
+	// 	if payload == "" {
+	// 		return false, req.Command + " takes the file path"
+	// 	}
+	// case MESSAGE:
+	// 	if payload == "" {
+	// 		return false, req.Command + " takes the text to send"
+	// 	}
+	case SEND, MESSAGE:
+		// TODO: compose chanName and real payload from payload
+		chanName := strings.TrimSpace(args[0])
+		realPayload := strings.TrimSpace(strings.Join(args[1:], " "))
+		if len(chanName) == 0 || len(realPayload) == 0 {
+			return false, req.Command + " takes two arguments. The channel # or name, and the data to send."
+		}
+	case LIST, EXIT:
 	default:
 		return false, "Invalid Command"
 	}

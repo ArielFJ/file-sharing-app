@@ -6,6 +6,7 @@ import (
 	"file-sharing-app/server/helpers"
 	"fmt"
 	"net"
+	"strings"
 )
 
 type server struct {
@@ -74,7 +75,9 @@ func (s *server) handleConn(c net.Conn) {
 
 func (s *server) closeClientConn(client *Client) {
 	helpers.Notify("Disconnecting user " + client.username)
-	client.send([]byte("You have been disconnected\n"))
+
+	res := NewResponse(OK, "You have been disconnected")
+	client.send(res.ToBuffer())
 	client.disconnect()
 	delete(s.clients, *client)
 }
@@ -89,7 +92,7 @@ func (s *server) handleRequest(c *Client, r request) {
 	case SEND:
 
 	case MESSAGE:
-
+		s.message(c, r)
 	case LIST:
 		s.list(c, r)
 	case STOP:
@@ -103,19 +106,20 @@ func (s *server) handleRequest(c *Client, r request) {
 
 func (s *server) username(c *Client, r request) {
 	oldUsername := c.username
-	response := fmt.Sprintf("Current username: %v\n", c.username)
+	response := NewResponse(OK, fmt.Sprintf("Current username: %v\n", c.username))
 	if len(r.Payload) > 0 {
 		c.username = r.Payload
-		response = fmt.Sprintf("New username: %v\n", c.username)
+		response.Result = fmt.Sprintf("New username: %v\n", c.username)
 		helpers.Notify(fmt.Sprintf("%v change its username from %q", c.getIdentifier(),oldUsername))
 	}
-	c.conn.Write([]byte(response))
+	c.send(response.ToBuffer())
 }
 
 func (s *server) channel(c *Client, r request) {
 	chanName := r.Payload
 	if len(chanName) < 1 {
-		c.conn.Write([]byte("Channel must have an identifier"))
+		res := NewResponse(ERROR, "Channel must have an identifier")
+		c.send(res.ToBuffer())
 		return
 	}
 	clientsInChannel, exists := s.channels[chanName]
@@ -172,4 +176,27 @@ func (s *server) list(c *Client, r request) {
 
 	res := NewResponse(OK, channelsText)
 	c.send(res.ToBuffer())
+}
+
+func (s *server) message(c *Client, r request) {
+	args := strings.Split(strings.TrimSpace(r.Payload), " ")
+	chanName := strings.TrimSpace(args[0])
+	realPayload := strings.TrimSpace(strings.Join(args[1:], " "))
+
+	clients, channelExists := s.channels[chanName]
+	if !channelExists {
+		res := NewResponse(ERROR, fmt.Sprintf("Channel %v does not exists", chanName))
+		c.send(res.ToBuffer())
+		return
+	}
+
+	for _, client := range clients {
+		if client != c {
+			res := NewResponse(OK, fmt.Sprintf("MSG from %v: %v", c.username, realPayload))
+			client.send(res.ToBuffer())
+		}
+	}
+
+	senderResponse := NewResponse(OK, "Message sent to channel " + chanName)
+	c.send(senderResponse.ToBuffer())
 }

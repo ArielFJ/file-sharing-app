@@ -26,10 +26,6 @@ func NewClient(c net.Conn, channel chan bool) Client {
 	}
 }
 
-func (c *Client) setUsername(name string) {
-	c.username = name
-}
-
 func (c *Client) send(data []byte) {
 	c.conn.Write(append(data, '\n'))
 }
@@ -81,16 +77,6 @@ func (c *Client) HandleSession() {
 		// Send request to SERVER
 		c.send(jsonBytes)
 
-		// response, err := bufio.NewReader(c.conn).ReadString('\n')
-		// if err != nil {
-		// 	helpers.PrintErrPrefix("RESPONSE", err)
-		// 	if err == io.EOF {
-		// 		break
-		// 	}
-
-		// 	continue
-		// }
-
 		res, mildError, fatalError := ReadFromConn(c.conn)
 		if fatalError {
 			break
@@ -141,7 +127,7 @@ func (c *Client) tryStartChannelMode(req request) {
 			return
 		}
 
-		fmt.Println("\n", res.String())
+		fmt.Println("\n", res.Result)
 		fmt.Print(inputPromptText)
 	}
 }
