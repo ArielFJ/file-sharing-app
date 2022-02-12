@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"file-sharing-app/client/helpers"
+	"file-sharing-app/client/models"
 	"net"
 )
 
@@ -10,23 +11,15 @@ const delimiter byte = 254 // ■
 func main() {
 	conn, err := net.Dial("tcp", "127.0.0.1:8000")
 	if err != nil {
-		printErr(err)
+		helpers.PrintErr(err)
 	}
 	defer conn.Close()
 
 	closeChan := make(chan bool)
 
-	client := NewClient(conn, closeChan)
+	client := models.NewClient(conn, closeChan)
 
-	go client.handleSession()
+	go client.HandleSession()
 
 	<- closeChan
-}
-
-func printErr(err error) {
-	fmt.Printf("Error: %v", err)
-}
-
-func printErrPrefix(prefix string, err error) {
-	fmt.Printf("Error %v: %v", prefix, err)
 }

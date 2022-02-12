@@ -1,11 +1,10 @@
-package main
+package models
 
 import (
 	"bufio"
 	"encoding/json"
 	"file-sharing-app/client/helpers"
 	"fmt"
-	"io"
 	"net"
 )
 
@@ -27,10 +26,6 @@ func NewClient(c net.Conn, channel chan bool) Client {
 	}
 }
 
-// func (c *Client) receive() {
-
-// }
-
 func (c *Client) setUsername(name string) {
 	c.username = name
 }
@@ -44,29 +39,25 @@ func (c *Client) disconnect() {
 	c.closeChan <- true
 }
 
-// func (c *Client) connect() {
 
-// }
-
-func (c *Client) handleSession() {
+func (c *Client) HandleSession() {
 	fmt.Printf("\n\nType %v to see how to interact with the server.\n\n", HELP)
 	for {
 		input, err := helpers.TakeInput(inputPromptText)
-		// c.isChannelMode = false
 		if err != nil {
-			printErrPrefix("INPUT", err)
+			helpers.PrintErrPrefix("INPUT", err)
 			continue
 		}
 
 		ok, req := BuildRequest(input)
 		if !ok {
-			printErrPrefix("REQ", fmt.Errorf(""))
+			helpers.PrintErrPrefix("REQ", fmt.Errorf(""))
 			continue
 		}
 
 		jsonBytes, err := json.Marshal(req)
 		if err != nil {
-			printErrPrefix("JSON", err)
+			helpers.PrintErrPrefix("JSON", err)
 			continue
 		}
 
@@ -90,45 +81,59 @@ func (c *Client) handleSession() {
 		// Send request to SERVER
 		c.send(jsonBytes)
 
-		response, err := bufio.NewReader(c.conn).ReadString('\n')
-		if err != nil {
-			printErrPrefix("RESPONSE", err)
-			if err == io.EOF {
-				break
-			}
+		// response, err := bufio.NewReader(c.conn).ReadString('\n')
+		// if err != nil {
+		// 	helpers.PrintErrPrefix("RESPONSE", err)
+		// 	if err == io.EOF {
+		// 		break
+		// 	}
 
+		// 	continue
+		// }
+
+		res, mildError, fatalError := ReadFromConn(c.conn)
+		if fatalError {
+			break
+		}
+
+		if mildError {
 			continue
 		}
 
-		fmt.Printf("-> %v", response)
+		fmt.Printf("-> %v\n", res.Result)
 
 		if req.Command == EXIT {
 			break
 		}
 
-		go c.tryStartChannelMode(req)
+		if req.Command == CHANNEL {
+			inputPromptText = fmt.Sprintf("%v >> ", req.Payload)
+			go c.tryStartChannelMode(req)
+		}
+
 	}
 
 	c.disconnect()
 }
+
 
 func (c *Client) tryStartChannelMode(req request) {
 	if req.Command != CHANNEL {
 		return
 	}
 	c.isChannelMode = true
-	inputPromptText = fmt.Sprintf("%v >> ", req.Payload)
 
 	for c.isChannelMode {
 		netData, err := bufio.NewReader(c.conn).ReadString('\n')
 		if err != nil {
-			printErrPrefix("CHANNEL", err)
+			helpers.PrintErrPrefix("CHANNEL", err)
 			continue
 		}
-		var res response
+
+		var res Response
 		err = json.Unmarshal([]byte(netData), &res)
 		if err != nil {
-			printErrPrefix("UNMARSHAL", err)
+			helpers.PrintErrPrefix("UNMARSHAL", err)
 			continue
 		}
 

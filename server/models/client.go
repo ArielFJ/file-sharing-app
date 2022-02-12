@@ -1,6 +1,9 @@
 package models
 
-import "net"
+import (
+	"fmt"
+	"net"
+)
 
 type Client struct {
 	conn           net.Conn
@@ -21,4 +24,8 @@ func (c *Client) send(data []byte) {
 
 func (c *Client) disconnect() {
 	c.conn.Close()
+}
+
+func (c *Client) getIdentifier() string {
+	return fmt.Sprintf("%v[%v]", c.username, c.conn.RemoteAddr())
 }

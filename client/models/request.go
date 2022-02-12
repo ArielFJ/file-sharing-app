@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"file-sharing-app/client/helpers"

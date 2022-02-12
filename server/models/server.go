@@ -34,8 +34,6 @@ func (s *server) RunServer(closeChan chan bool) {
 			continue
 		}
 
-		fmt.Printf("%v has connected\n", conn.RemoteAddr())
-
 		go s.handleConn(conn)
 	}
 
@@ -46,8 +44,10 @@ func (s *server) RunServer(closeChan chan bool) {
 func (s *server) handleConn(c net.Conn) {
 	newClient := NewClient(c)
 	s.clients[newClient] = true
-	for {
 
+	helpers.Notify(fmt.Sprintf("%v has connected",newClient.getIdentifier()))
+
+	for {
 		// netData, err := ioutil.ReadAll(newClient.conn) For reading files
 		netData, err := bufio.NewReader(newClient.conn).ReadString('\n')
 		if err != nil {
@@ -73,13 +73,14 @@ func (s *server) handleConn(c net.Conn) {
 }
 
 func (s *server) closeClientConn(client *Client) {
-	fmt.Println("Disconnecting user", client.username)
+	helpers.Notify("Disconnecting user " + client.username)
 	client.send([]byte("You have been disconnected\n"))
 	client.disconnect()
 	delete(s.clients, *client)
 }
 
 func (s *server) handleRequest(c *Client, r request) {
+	helpers.Notify(fmt.Sprintf("%v CMD: %v %v", c.getIdentifier(), r.Command, r.Payload))
 	switch r.Command {
 	case USERNAME:
 		s.username(c, r)
@@ -90,7 +91,7 @@ func (s *server) handleRequest(c *Client, r request) {
 	case MESSAGE:
 
 	case LIST:
-
+		s.list(c, r)
 	case STOP:
 		s.quitChannel(c, r)
 	case EXIT:
@@ -101,10 +102,12 @@ func (s *server) handleRequest(c *Client, r request) {
 }
 
 func (s *server) username(c *Client, r request) {
+	oldUsername := c.username
 	response := fmt.Sprintf("Current username: %v\n", c.username)
 	if len(r.Payload) > 0 {
 		c.username = r.Payload
 		response = fmt.Sprintf("New username: %v\n", c.username)
+		helpers.Notify(fmt.Sprintf("%v change its username from %q", c.getIdentifier(),oldUsername))
 	}
 	c.conn.Write([]byte(response))
 }
@@ -126,16 +129,47 @@ func (s *server) channel(c *Client, r request) {
 	s.channels[chanName] = clients
 	c.currentChannel = chanName
 
-	res := NewResponse(OK, fmt.Sprintf("%v added to channel %v\n", c.username, chanName))
+	helpers.Notify(fmt.Sprintf("%v connected to channel %q", c.getIdentifier(), c.currentChannel))
+
+	res := NewResponse(OK, fmt.Sprintf("%v added to channel %q\n", c.username, chanName))
 	c.send(res.ToBuffer())
 }
 
 func (s *server) quitChannel(c *Client, r request) {
-	res := NewResponse(ERROR, fmt.Sprintf("%v removed from channel %v\n", c.username, c.currentChannel))
-	_, exists := s.channels[c.currentChannel]
-	if exists {
+	res := NewResponse(ERROR, fmt.Sprintf("%v removed from channel %q\n", c.username, c.currentChannel))
+	currentClients, channelExists := s.channels[c.currentChannel]
+	if channelExists {
+		// Remove the client from the channel
+		clients := []*Client{}
+		for _, client := range currentClients {
+			if client != c {
+				clients = append(clients, client)
+			}
+		}
+		s.channels[c.currentChannel] = clients
+	}
+	
+	// Close the channel if it doesn't have users
+	if len(s.channels[c.currentChannel]) == 0 {
 		delete(s.channels, c.currentChannel)
 	}
+
+	helpers.Notify(fmt.Sprintf("%v left channel %q", c.getIdentifier(), c.currentChannel))
 	c.currentChannel = ""
+
+	c.send(res.ToBuffer())
+}
+
+func (s *server) list(c *Client, r request) {
+	channelsText := "Available Channels:\n"
+	for chanName, clients := range s.channels {
+		channelsText += fmt.Sprintf("\t - %v (%v clients)\n", chanName, len(clients))
+	}
+
+	if len(s.channels) == 0 {
+		channelsText = "No Available Channels. Run help to see how to create one."
+	}
+
+	res := NewResponse(OK, channelsText)
 	c.send(res.ToBuffer())
 }
