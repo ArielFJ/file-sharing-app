@@ -6,26 +6,28 @@ import (
 )
 
 type Client struct {
-	conn           net.Conn
-	username       string
-	currentChannel string
+	Conn           net.Conn
+	Username       string
+	CurrentChannel string
 }
 
 func NewClient(c net.Conn) Client {
 	return Client{
-		conn:     c,
-		username: "anonymous",
+		Conn:     c,
+		Username: "anonymous",
 	}
 }
 
-func (c *Client) send(data []byte) {
-	c.conn.Write(append(data, '\n'))
+func (c *Client) Send(data []byte) {
+	c.Conn.Write(append(data, '\n'))
 }
 
-func (c *Client) disconnect() {
-	c.conn.Close()
+func (c *Client) Disconnect() {
+	res := NewResponse(OK, EXIT, "You have been disconnected")
+	c.Send(res.ToBuffer())
+	c.Conn.Close()
 }
 
-func (c *Client) getIdentifier() string {
-	return fmt.Sprintf("%v[%v]", c.username, c.conn.RemoteAddr())
+func (c *Client) GetIdentifier() string {
+	return fmt.Sprintf("%v[%v]", c.Username, c.Conn.RemoteAddr())
 }
