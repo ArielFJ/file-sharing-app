@@ -6,6 +6,7 @@ import (
 	"file-sharing-app/server/helpers"
 	"fmt"
 	"net"
+	"path/filepath"
 	"strings"
 )
 
@@ -46,7 +47,7 @@ func (s *server) handleConn(c net.Conn) {
 	newClient := NewClient(c)
 	s.clients[newClient] = true
 
-	helpers.Notify(fmt.Sprintf("%v has connected",newClient.getIdentifier()))
+	helpers.Notify(fmt.Sprintf("%v has connected", newClient.getIdentifier()))
 
 	for {
 		// netData, err := ioutil.ReadAll(newClient.conn) For reading files
@@ -74,9 +75,9 @@ func (s *server) handleConn(c net.Conn) {
 }
 
 func (s *server) closeClientConn(client *Client) {
-	helpers.Notify("Disconnecting user " + client.username)
+	helpers.Notify("Disconnecting user " + client.getIdentifier())
 
-	res := NewResponse(OK, "You have been disconnected")
+	res := NewResponse(OK, EXIT, "You have been disconnected")
 	client.send(res.ToBuffer())
 	client.disconnect()
 	delete(s.clients, *client)
@@ -90,7 +91,7 @@ func (s *server) handleRequest(c *Client, r request) {
 	case CHANNEL:
 		s.channel(c, r)
 	case SEND:
-
+		s.send(c, r)
 	case MESSAGE:
 		s.message(c, r)
 	case LIST:
@@ -106,11 +107,11 @@ func (s *server) handleRequest(c *Client, r request) {
 
 func (s *server) username(c *Client, r request) {
 	oldUsername := c.username
-	response := NewResponse(OK, fmt.Sprintf("Current username: %v\n", c.username))
+	response := NewResponse(OK,r.Command, fmt.Sprintf("Current username: %v\n", c.username))
 	if len(r.Payload) > 0 {
 		c.username = r.Payload
 		response.Result = fmt.Sprintf("New username: %v\n", c.username)
-		helpers.Notify(fmt.Sprintf("%v change its username from %q", c.getIdentifier(),oldUsername))
+		helpers.Notify(fmt.Sprintf("%v change its username from %q", c.getIdentifier(), oldUsername))
 	}
 	c.send(response.ToBuffer())
 }
@@ -118,7 +119,7 @@ func (s *server) username(c *Client, r request) {
 func (s *server) channel(c *Client, r request) {
 	chanName := r.Payload
 	if len(chanName) < 1 {
-		res := NewResponse(ERROR, "Channel must have an identifier")
+		res := NewResponse(ERROR,r.Command, "Channel must have an identifier")
 		c.send(res.ToBuffer())
 		return
 	}
@@ -135,12 +136,12 @@ func (s *server) channel(c *Client, r request) {
 
 	helpers.Notify(fmt.Sprintf("%v connected to channel %q", c.getIdentifier(), c.currentChannel))
 
-	res := NewResponse(OK, fmt.Sprintf("%v added to channel %q\n", c.username, chanName))
+	res := NewResponse(OK,r.Command, fmt.Sprintf("%v added to channel %q\n", c.username, chanName))
 	c.send(res.ToBuffer())
 }
 
 func (s *server) quitChannel(c *Client, r request) {
-	res := NewResponse(ERROR, fmt.Sprintf("%v removed from channel %q\n", c.username, c.currentChannel))
+	res := NewResponse(ERROR,r.Command, fmt.Sprintf("%v removed from channel %q\n", c.username, c.currentChannel))
 	currentClients, channelExists := s.channels[c.currentChannel]
 	if channelExists {
 		// Remove the client from the channel
@@ -152,7 +153,7 @@ func (s *server) quitChannel(c *Client, r request) {
 		}
 		s.channels[c.currentChannel] = clients
 	}
-	
+
 	// Close the channel if it doesn't have users
 	if len(s.channels[c.currentChannel]) == 0 {
 		delete(s.channels, c.currentChannel)
@@ -174,7 +175,7 @@ func (s *server) list(c *Client, r request) {
 		channelsText = "No Available Channels. Run help to see how to create one."
 	}
 
-	res := NewResponse(OK, channelsText)
+	res := NewResponse(OK,r.Command, channelsText)
 	c.send(res.ToBuffer())
 }
 
@@ -185,18 +186,43 @@ func (s *server) message(c *Client, r request) {
 
 	clients, channelExists := s.channels[chanName]
 	if !channelExists {
-		res := NewResponse(ERROR, fmt.Sprintf("Channel %v does not exists", chanName))
+		res := NewResponse(ERROR,r.Command, fmt.Sprintf("Channel %v does not exists", chanName))
 		c.send(res.ToBuffer())
 		return
 	}
 
 	for _, client := range clients {
 		if client != c {
-			res := NewResponse(OK, fmt.Sprintf("MSG from %v: %v", c.username, realPayload))
+			res := NewResponse(OK,r.Command, fmt.Sprintf("MSG from %v: %v", c.username, realPayload))
 			client.send(res.ToBuffer())
 		}
 	}
 
-	senderResponse := NewResponse(OK, "Message sent to channel " + chanName)
+	senderResponse := NewResponse(OK,r.Command, "Message sent to channel "+chanName)
+	c.send(senderResponse.ToBuffer())
+}
+
+func (s *server) send(c *Client, r request) {
+	args := strings.Split(strings.TrimSpace(r.Payload), " ")
+	chanName := strings.TrimSpace(args[0])
+	filePath := strings.TrimSpace(strings.Join(args[1:], " "))
+	fileName := filepath.Base(filePath)
+
+	clients, channelExists := s.channels[chanName]
+	if !channelExists {
+		res := NewResponse(ERROR,r.Command, fmt.Sprintf("Channel %v does not exists", chanName))
+		c.send(res.ToBuffer())
+		return
+	}
+
+	for _, client := range clients {
+		if client != c {
+			res := NewResponse(OK,r.Command, fmt.Sprintf("File from %v: %v", c.username, fileName))
+			res.Data = r.Data
+			client.send(res.ToBuffer())
+		}
+	}
+
+	senderResponse := NewResponse(OK,r.Command, fmt.Sprintf("File %v sent to channel %v", fileName, chanName))
 	c.send(senderResponse.ToBuffer())
 }

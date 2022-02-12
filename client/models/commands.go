@@ -38,16 +38,7 @@ func validateCommand(req request) (bool, string) {
 		if len(args) != 1 || payload == "" {
 			return false, req.Command + " takes one argument"
 		}
-	// case SEND:
-	// 	if payload == "" {
-	// 		return false, req.Command + " takes the file path"
-	// 	}
-	// case MESSAGE:
-	// 	if payload == "" {
-	// 		return false, req.Command + " takes the text to send"
-	// 	}
 	case SEND, MESSAGE:
-		// TODO: compose chanName and real payload from payload
 		chanName := strings.TrimSpace(args[0])
 		realPayload := strings.TrimSpace(strings.Join(args[1:], " "))
 		if len(chanName) == 0 || len(realPayload) == 0 {
@@ -70,7 +61,7 @@ func showHelp() {
 	fmt.Println("\t", CHANNEL, ": Connect or creates a channel.")
 	fmt.Println("\t\tUses:", CHANNEL, "<channel # or name>")
 
-	fmt.Println("\t", STOP, ": Closes a connection with a channel. You have to close the channel to continue using the tool normally.")
+	fmt.Println("\t", STOP, ": Closes a connection with a channel.\n You have to close the channel to continue using the tool normally.")
 
 	fmt.Println("\t", SEND, ": Send file to channel.")
 	fmt.Println("\t\tUses:", SEND, "<channel # or name> <file path>")

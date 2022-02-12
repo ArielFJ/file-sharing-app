@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"file-sharing-app/client/helpers"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"os"
+	"strings"
 )
 
 var inputPromptText = ">> "
@@ -35,7 +38,6 @@ func (c *Client) disconnect() {
 	c.closeChan <- true
 }
 
-
 func (c *Client) HandleSession() {
 	fmt.Printf("\n\nType %v to see how to interact with the server.\n\n", HELP)
 	for {
@@ -51,9 +53,15 @@ func (c *Client) HandleSession() {
 			continue
 		}
 
-		jsonBytes, err := json.Marshal(req)
-		if err != nil {
-			helpers.PrintErrPrefix("JSON", err)
+		if c.isChannelMode {
+			if req.Command == STOP {
+				jsonBytes, err := json.Marshal(req)
+				if err != nil {
+					helpers.PrintErrPrefix("JSON", err)
+					continue
+				}
+				c.disconnectFromChannel(jsonBytes)
+			}
 			continue
 		}
 
@@ -62,22 +70,29 @@ func (c *Client) HandleSession() {
 			continue
 		}
 
-		if c.isChannelMode {
-			if req.Command == STOP {
-				c.disconnectFromChannel(jsonBytes)
-			}
+		if ok, msg := validateCommand(req); !ok {
+			fmt.Println("*", msg)
 			continue
 		}
 
-		if ok, msg := validateCommand(req); !ok {
-			fmt.Println("*", msg)
+		if req.Command == SEND {
+			err := req.BuildRequestWithFileData()
+			if err != nil {
+				helpers.PrintErrPrefix("SEND", err)
+				continue
+			}
+		}
+
+		jsonBytes, err := json.Marshal(req)
+		if err != nil {
+			helpers.PrintErrPrefix("JSON", err)
 			continue
 		}
 
 		// Send request to SERVER
 		c.send(jsonBytes)
 
-		res, mildError, fatalError := ReadFromConn(c.conn)
+		res, mildError, fatalError := ReadFromConn(req, c.conn)
 		if fatalError {
 			break
 		}
@@ -102,7 +117,6 @@ func (c *Client) HandleSession() {
 	c.disconnect()
 }
 
-
 func (c *Client) tryStartChannelMode(req request) {
 	if req.Command != CHANNEL {
 		return
@@ -125,6 +139,22 @@ func (c *Client) tryStartChannelMode(req request) {
 
 		if res.Code == ERROR {
 			return
+		}
+
+		if res.Command == SEND {
+			result := strings.Split(res.Result, ":")
+			fileName := result[len(result)-1]
+
+			filePath := "./files/" + fileName
+
+			os.MkdirAll("./files", os.ModePerm)
+
+			// If file exists, delete it
+			if _, err := os.Stat(filePath); err == nil {
+				os.Remove(filePath)
+			}
+
+			ioutil.WriteFile(filePath, res.Data, 0644)
 		}
 
 		fmt.Println("\n", res.Result)

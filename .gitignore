@@ -17,3 +17,4 @@
 # Local files and dirs
 sent_files/**/*
 sample_files/**/*
+build/**/*

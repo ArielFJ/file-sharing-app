@@ -15,21 +15,23 @@ const (
 )
 
 type Response struct {
-	Code   int    `json:"code"`
-	Result string `json:"result"`
-	Data   []byte `json:"data"`
+	Code    int    `json:"code"`
+	Command string `json:"command"`
+	Result  string `json:"result"`
+	Data    []byte `json:"data"`
 }
 
 func NewResponse(code int, result string) Response {
 	return Response{
-		Code: code,
-		Result: result,
+		Code:    code,
+		Command: "",
+		Result:  result,
 		Data:    []byte{},
 	}
 }
 
 func (r *Response) String() string {
-	return fmt.Sprintf("{\n code: %v,\n result: %v,\n dataLength: %v \n}\n", r.Code, r.Result, len(r.Data))
+	return fmt.Sprintf("{\n code: %v,\n command: %v,\n result: %v,\n dataLength: %v \n}\n", r.Code, r.Command, r.Result, len(r.Data))
 }
 
 func (r *Response) ToBuffer() []byte {
@@ -40,7 +42,7 @@ func (r *Response) ToBuffer() []byte {
 	return bytes
 }
 
-func ReadFromConn(c net.Conn) (res Response, mildError, fatalError bool) {
+func ReadFromConn(req request, c net.Conn) (res Response, mildError, fatalError bool) {
 	fatalError = false
 	mildError = false
 
