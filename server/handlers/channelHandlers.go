@@ -9,22 +9,22 @@ import (
 )
 
 // HandleJoinChannel handles requests to join a channel. If the channel doesn't exists, it will be created.
-func HandleJoinChannel(c *models.Client, r models.Request, channels map[string][]*models.Client) {
+func HandleJoinChannel(c *models.Client, r models.Request, channels map[string]*models.Channel) {
 	chanName := r.Payload
 	if len(chanName) < 1 {
 		res := models.NewResponse(models.ERROR, r.Command, "Channel must have an identifier")
 		c.Send(res.ToBuffer())
 		return
 	}
-	clientsInChannel, exists := channels[chanName]
-	var clients []*models.Client
+
+	channel, exists := channels[chanName]
 	if !exists {
-		clients = []*models.Client{c}
-	} else {
-		clients = append(clientsInChannel, c)
+		channels[chanName] = models.NewChannel(chanName)
+		channel = channels[chanName]
 	}
 
-	channels[chanName] = clients
+	channel.ClientsJoined =  append(channel.ClientsJoined, c)
+
 	c.CurrentChannel = chanName
 
 	helpers.Notify(fmt.Sprintf("%v connected to channel %q", c.GetIdentifier(), c.CurrentChannel))
@@ -34,24 +34,24 @@ func HandleJoinChannel(c *models.Client, r models.Request, channels map[string][
 }
 
 // HandleQuitChannel handles disconnection from channels. If the channel is left with 0 clients, it will close.
-func HandleQuitChannel(c *models.Client, r models.Request, channels map[string][]*models.Client) {
+func HandleQuitChannel(c *models.Client, r models.Request, channels map[string]*models.Channel) {
 	res := models.NewResponse(models.ERROR, r.Command, fmt.Sprintf("%v removed from channel %q\n", c.Username, c.CurrentChannel))
-	currentClients, channelExists := channels[c.CurrentChannel]
+	channel, channelExists := channels[c.CurrentChannel]
 	if channelExists {
 		// Remove the client from the channel
 		clients := []*models.Client{}
-		for _, client := range currentClients {
+		for _, client := range channel.ClientsJoined {
 			if client != c {
 				clients = append(clients, client)
 			}
 		}
-		channels[c.CurrentChannel] = clients
+		channel.ClientsJoined = clients
 	}
 
 	// Close the channel if it doesn't have users
-	if len(channels[c.CurrentChannel]) == 0 {
-		delete(channels, c.CurrentChannel)
-	}
+	// if len(channels[c.CurrentChannel]) == 0 {
+	// 	delete(channels, c.CurrentChannel)
+	// }
 
 	helpers.Notify(fmt.Sprintf("%v left channel %q", c.GetIdentifier(), c.CurrentChannel))
 	c.CurrentChannel = ""
@@ -60,10 +60,10 @@ func HandleQuitChannel(c *models.Client, r models.Request, channels map[string][
 }
 
 // HandleListChannels handles request to show a list of available channels.
-func HandleListChannels(c *models.Client, r models.Request, channels map[string][]*models.Client) {
+func HandleListChannels(c *models.Client, r models.Request, channels map[string]*models.Channel) {
 	channelsText := "Available Channels:\n"
-	for chanName, clients := range channels {
-		channelsText += fmt.Sprintf("\t - %v (%v clients)\n", chanName, len(clients))
+	for chanName, channel := range channels {
+		channelsText += fmt.Sprintf("\t - %v (%v clients)\n", chanName, len(channel.ClientsJoined))
 	}
 
 	if len(channels) == 0 {
@@ -75,15 +75,17 @@ func HandleListChannels(c *models.Client, r models.Request, channels map[string]
 }
 
 // HandleMessageToChannel handles requests to send messages to clients in a channel.
-func HandleMessageToChannel(c *models.Client, r models.Request, channels map[string][]*models.Client) {
+func HandleMessageToChannel(c *models.Client, r models.Request, channels map[string]*models.Channel) {
 	chanName, realPayload := getChannelPayloadArgs(r.Payload)
 
-	clients, err := checkChannel(channels, chanName, r.Command, c)
+	channel, err := checkChannel(channels, chanName, r.Command, c)
 	if err != nil {
 		return
 	}
 
-	broadcastDataToClients(c, clients, func() models.Response {
+	channel.AddMessage(realPayload)
+
+	broadcastDataToClients(c, channel.ClientsJoined, func() models.Response {
 		res := models.NewResponse(models.OK, r.Command, fmt.Sprintf("MSG from %v: %v", c.Username, realPayload))
 		return res
 	})
@@ -93,16 +95,18 @@ func HandleMessageToChannel(c *models.Client, r models.Request, channels map[str
 }
 
 // HandleSendFileToChannel handles requests to send files to clients in a channel.
-func HandleSendFileToChannel(c *models.Client, r models.Request, channels map[string][]*models.Client) {
+func HandleSendFileToChannel(c *models.Client, r models.Request, channels map[string]*models.Channel) {
 	chanName, filePath := getChannelPayloadArgs(r.Payload)
 	fileName := filepath.Base(filePath)
 
-	clients, err := checkChannel(channels, chanName, r.Command, c)
+	channel, err := checkChannel(channels, chanName, r.Command, c)
 	if err != nil {
 		return
 	}
 
-	broadcastDataToClients(c, clients, func() models.Response {
+	channel.AddFile(fileName, int64(len(r.Data)))
+
+	broadcastDataToClients(c, channel.ClientsJoined, func() models.Response {
 		res := models.NewResponse(models.OK, r.Command, fmt.Sprintf("File from %v: %v", c.Username, fileName))
 		res.Data = r.Data
 		return res
@@ -112,15 +116,16 @@ func HandleSendFileToChannel(c *models.Client, r models.Request, channels map[st
 	c.Send(senderResponse.ToBuffer())
 }
 
-func checkChannel(channels map[string][]*models.Client, chanName, command string, c *models.Client) (clients []*models.Client, err error) {
-	clients, channelExists := channels[chanName]
+func checkChannel(channels map[string]*models.Channel, chanName, command string, c *models.Client) (channel *models.Channel, err error) {
+	channel, channelExists := channels[chanName]
+	
 	if !channelExists {
 		res := models.NewResponse(models.ERROR, command, fmt.Sprintf("Channel %v does not exists", chanName))
 		c.Send(res.ToBuffer())
 		return nil, fmt.Errorf("channel does not exists")
 	}
 
-	return clients, nil
+	return channel, nil
 }
 
 func broadcastDataToClients(sender *models.Client, recipients []*models.Client, getResponse func() models.Response) {

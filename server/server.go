@@ -12,14 +12,14 @@ import (
 
 type Server struct {
 	clients  map[models.Client]bool
-	channels map[string][]*models.Client
+	channels map[string]*models.Channel
 	listener net.Listener
 }
 
 func NewServer(l net.Listener) Server {
 	return Server{
 		clients:  make(map[models.Client]bool),
-		channels: make(map[string][]*models.Client),
+		channels: make(map[string]*models.Channel),
 		listener: l,
 	}
 }
@@ -84,6 +84,8 @@ func (s *Server) handleRequest(c *models.Client, r models.Request) {
 		handlers.HandleQuitChannel(c, r, s.channels)
 	case models.EXIT:
 		handlers.HandleExit(c, s.clients)
+	case models.DATA:
+		handlers.HandleGetData(c, r, s.channels)
 	default:
 		res := models.NewResponseWithDefaultCode(models.ERROR, "Invalid Command")
 		c.Send(res.ToBuffer())
