@@ -2,7 +2,14 @@
 export default {
   data() {
     return {
-      channels: []
+      channels: [
+        {
+          name: 'channel1'
+        },
+        {
+          name: 'channel2'
+        },
+      ]
     }
   },
   methods: {
@@ -21,7 +28,38 @@ export default {
 </script>
 
 <template>
-  <div class="wrapper">
+  <div class="accordion" id="accordionExample">
+    <div
+      class="accordion-item"
+      v-if="channels.length > 0"
+      v-for="channel in channels"
+      :key="channel.channelName"
+    >
+      <h2 class="accordion-header" :id="`heading${channel.name}`">
+        <button
+          class="accordion-button collapsed"
+          type="button"
+          data-bs-toggle="collapse"
+          :data-bs-target="`#collapse${channel.name}`"
+          aria-expanded="false"
+          :aria-controls="`collapse${channel.name}`"
+        >Channel {{ channel.name }}</button>
+      </h2>
+      <div
+        :id="`collapse${channel.name}`"
+        class="accordion-collapse collapse"
+        :aria-labelledby="`heading${channel.name}`"
+        data-bs-parent="#accordionExample"
+      >
+        <div class="accordion-body">
+          <strong>This is the first item's accordion body.</strong> It is shown by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the
+          <code>.accordion-body</code>, though the transition does limit overflow.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- <div class="wrapper">
     <table>
       <tr>
         <th>Channel</th>
@@ -38,7 +76,7 @@ export default {
         <td>{{ channel.messagesSent.length }}</td>
       </tr>
     </table>
-  </div>
+  </div>-->
 </template>
 
 <style>
