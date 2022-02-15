@@ -19,8 +19,8 @@ func HandleUsername(c *models.Client, r models.Request) {
 }
 
 // HandleExit handle the disconnection of the client
-func HandleExit(c *models.Client, clients map[models.Client]bool) {
+func HandleExit(c *models.Client, clients map[*models.Client]bool) {
 	helpers.Notify("Disconnecting user " + c.GetIdentifier())
 	c.Disconnect()
-	delete(clients, *c)
+	delete(clients, c)
 }

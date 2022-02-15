@@ -5,7 +5,7 @@ import (
 	"file-sharing-app/server/models"
 )
 
-func HandleGetData(c *models.Client, r models.Request, channels map[string]*models.Channel) {
+func HandleGetData(c *models.Client, channels map[string]*models.Channel) {
 	channelsData := []models.ChannelResponse{}
 
 	for _, channel := range channels {
@@ -19,4 +19,21 @@ func HandleGetData(c *models.Client, r models.Request, channels map[string]*mode
 	}
 
 	c.Send(jsonBytes)
+	c.Disconnect()
+}
+
+func HandleGetClients(c *models.Client, clients map[*models.Client]bool) {
+	clientsData := []string{}
+
+	for client := range clients {
+		clientsData = append(clientsData, client.GetIdentifier())
+	}
+
+	jsonBytes, err := json.Marshal(clientsData)
+	if err != nil {
+		c.Send([]byte("Error: " + err.Error()))
+	}
+
+	c.Send(jsonBytes)
+	c.Disconnect()
 }

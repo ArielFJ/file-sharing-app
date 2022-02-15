@@ -11,14 +11,14 @@ import (
 )
 
 type Server struct {
-	clients  map[models.Client]bool
+	clients  map[*models.Client]bool
 	channels map[string]*models.Channel
 	listener net.Listener
 }
 
 func NewServer(l net.Listener) Server {
 	return Server{
-		clients:  make(map[models.Client]bool),
+		clients:  make(map[*models.Client]bool),
 		channels: make(map[string]*models.Channel),
 		listener: l,
 	}
@@ -41,7 +41,7 @@ func (s *Server) RunServer(closeChan chan bool) {
 
 func (s *Server) handleConn(c net.Conn) {
 	newClient := models.NewClient(c)
-	s.clients[newClient] = true
+	s.clients[&newClient] = true
 
 	helpers.Notify(fmt.Sprintf("%v has connected", newClient.GetIdentifier()))
 
@@ -85,7 +85,9 @@ func (s *Server) handleRequest(c *models.Client, r models.Request) {
 	case models.EXIT:
 		handlers.HandleExit(c, s.clients)
 	case models.DATA:
-		handlers.HandleGetData(c, r, s.channels)
+		handlers.HandleGetData(c, s.channels)
+	case models.CLIENTS:
+		handlers.HandleGetClients(c, s.clients)
 	default:
 		res := models.NewResponseWithDefaultCode(models.ERROR, "Invalid Command")
 		c.Send(res.ToBuffer())

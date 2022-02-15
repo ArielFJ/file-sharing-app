@@ -8,6 +8,8 @@ var (
 	MESSAGE  = "msg"
 	LIST     = "list"
 	EXIT     = "exit"
-	
-	DATA     = "data" // For Http Client
+
+	// For Http Client
+	DATA    = "data"
+	CLIENTS = "clients"
 )

@@ -53,79 +53,81 @@ export default {
 </script>
 
 <template>
-  <div class="accordion" id="accordionExample">
-    <div
-      class="accordion-item"
-      v-if="channels.length > 0"
-      v-for="channel in orderedChannels"
-      :key="channel.channelName"
-    >
-      <h2 class="accordion-header" :id="`heading${channel.name}`">
-        <button
-          class="accordion-button collapsed"
-          type="button"
-          data-bs-toggle="collapse"
-          :data-bs-target="`#collapse${channel.name}`"
-          aria-expanded="false"
-          :aria-controls="`collapse${channel.name}`"
-        >
-          <div class="w-100 row">
-            <div class="col-3">Channel {{ channel.name }}</div>
-            <div class="col-6 offset-2">
-              {{ getBytesSentAsPecent(channel) }}% of total bytes sent to this channel
-              <div class="progress">
-                <div
-                  class="progress-bar bg-warning"
-                  role="progressbar"
-                  :style="`width: ${getBytesSentAsPecent(channel)}%;`"
-                  aria-valuenow="75"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                ></div>
+  <StatCard title="Channels" bgcolor="border-light">
+    <div class="accordion" id="accordionExample">
+      <div
+        class="accordion-item"
+        v-if="channels.length > 0"
+        v-for="channel in orderedChannels"
+        :key="channel.channelName"
+      >
+        <h2 class="accordion-header" :id="`heading${channel.name}`">
+          <button
+            class="accordion-button collapsed"
+            type="button"
+            data-bs-toggle="collapse"
+            :data-bs-target="`#collapse${channel.name}`"
+            aria-expanded="false"
+            :aria-controls="`collapse${channel.name}`"
+          >
+            <div class="w-100 row">
+              <div class="col-3">Channel {{ channel.name }}</div>
+              <div class="col-6 offset-2">
+                {{ getBytesSentAsPecent(channel) }}% of total bytes sent to this channel
+                <div class="progress">
+                  <div
+                    class="progress-bar bg-warning"
+                    role="progressbar"
+                    :style="`width: ${getBytesSentAsPecent(channel)}%;`"
+                    aria-valuenow="75"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  ></div>
+                </div>
               </div>
             </div>
-          </div>
-        </button>
-      </h2>
-      <div
-        :id="`collapse${channel.name}`"
-        class="accordion-collapse collapse"
-        :aria-labelledby="`heading${channel.name}`"
-        data-bs-parent="#accordionExample"
-      >
-        <div class="accordion-body">
-          <div class="row">
-            <div class="col-lg-4">
-              <StatCard title="Files Sent" bgcolor="bg-info">
-                <ul class="p-0">
-                  <li v-for="fileName, index in channel.filesSent" :key="index">{{ fileName }}</li>
-                </ul>
-              </StatCard>
-            </div>
-            <div class="col-lg-5">
-              <StatCard title="Messages Sent" bgcolor="bg-primary">
-                <ul class="p-0">
-                  <li v-for="msg, index in channel.messagesSent" :key="index">{{ msg }}</li>
-                </ul>
-              </StatCard>
-            </div>
-            <div class="col-lg-3">
-              <StatCard title="Additional Data" bgcolor="border-success">
-                <p>Name: {{ channel.name }}</p>
-                <p>Bytes sent: {{ channel.bytesSent }}</p>
-              </StatCard>
-              <br />
-              <StatCard title="Clients" bgcolor="bg-secondary">
-                <ul class="p-0">
-                  <li v-for="client, index in channel.clients" :key="index">{{ client }}</li>
-                </ul>
-              </StatCard>
+          </button>
+        </h2>
+        <div
+          :id="`collapse${channel.name}`"
+          class="accordion-collapse collapse"
+          :aria-labelledby="`heading${channel.name}`"
+          data-bs-parent="#accordionExample"
+        >
+          <div class="accordion-body">
+            <div class="row">
+              <div class="col-lg-4">
+                <StatCard title="Files Sent" bgcolor="bg-info">
+                  <ul class="p-0">
+                    <li v-for="fileName, index in channel.filesSent" :key="index">{{ fileName }}</li>
+                  </ul>
+                </StatCard>
+              </div>
+              <div class="col-lg-5">
+                <StatCard title="Messages Sent" bgcolor="bg-primary">
+                  <ul class="p-0">
+                    <li v-for="msg, index in channel.messagesSent" :key="index">{{ msg }}</li>
+                  </ul>
+                </StatCard>
+              </div>
+              <div class="col-lg-3">
+                <StatCard title="Additional Data" bgcolor="border-success">
+                  <p>Name: {{ channel.name }}</p>
+                  <p>Bytes sent: {{ channel.bytesSent }}</p>
+                </StatCard>
+                <br />
+                <StatCard title="Clients" bgcolor="bg-secondary">
+                  <ul class="p-0">
+                    <li v-for="client, index in channel.clients" :key="index">{{ client }}</li>
+                  </ul>
+                </StatCard>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
+  </StatCard>
 </template>
 
 <style>
