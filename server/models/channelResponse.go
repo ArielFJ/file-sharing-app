@@ -18,7 +18,7 @@ func NewChannelResponse(c Channel) *ChannelResponse {
 	}
 
 	for _, client := range c.ClientsJoined {
-		res.Clients = append(res.Clients, client.Username)
+		res.Clients = append(res.Clients, client.GetIdentifier())
 	}
 
 	return res

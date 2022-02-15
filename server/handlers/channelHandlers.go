@@ -83,7 +83,7 @@ func HandleMessageToChannel(c *models.Client, r models.Request, channels map[str
 		return
 	}
 
-	channel.AddMessage(realPayload)
+	channel.AddMessage(fmt.Sprintf("%v: %v", c.GetIdentifier(), realPayload))
 
 	broadcastDataToClients(c, channel.ClientsJoined, func() models.Response {
 		res := models.NewResponse(models.OK, r.Command, fmt.Sprintf("MSG from %v: %v", c.Username, realPayload))
@@ -104,7 +104,7 @@ func HandleSendFileToChannel(c *models.Client, r models.Request, channels map[st
 		return
 	}
 
-	channel.AddFile(fileName, int64(len(r.Data)))
+	channel.AddFile(fmt.Sprintf("%v sent: %v", c.GetIdentifier(), fileName), int64(len(r.Data)))
 
 	broadcastDataToClients(c, channel.ClientsJoined, func() models.Response {
 		res := models.NewResponse(models.OK, r.Command, fmt.Sprintf("File from %v: %v", c.Username, fileName))
